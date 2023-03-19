@@ -1,47 +1,38 @@
-const express = require('express');
+'use strict';
+
 require('dotenv').config();
-let data = require('./data/weather.json');
+const express = require('express');
 const cors = require('cors');
+
 const app = express();
 app.use(cors());
 
-const PORT = process.env.PORT || 3002;
+const getMovies = require('./modules/movies.js');
+app.get('/movie', movieHandler);
 
-app.get('/', (request, response) => {
-  response.send('Hello, nice to meet you');
+const weather = require('./modules/weather.js');
+app.get('/weather', weatherHandler);
 
-});
-
-app.get('/weather', (request, response, next) => {
-console.log(request.query);
-  try {
-    let cityRequested = request.query.city_name;
-    console.log('user searched for:', cityRequested);
-
-    let cityObject = data.find(city => city.city_name === cityRequested);
-    console.log(cityObject.data);
-
-    let forecast = cityObject.data.map(obj =>
-      new Forecast(obj)
-    );
-    console.log(forecast);
-    response.send(forecast);
-
-    if (!cityObject) {
-      throw new Error('City not found');
-    }
-
-  } catch (error) {
-    next(error);
-  }
-});
-function Forecast (cityObject) {
-  this.date = cityObject.valid_date;
-  this.description = cityObject.weather.description;
+function movieHandler(request, response, next) {
+  getMovies(request, response, next)
+    .then(summaries => response.send(summaries))
+    .catch((error) => {
+      console.log(error);
+      response.status(500).send('Movies are unavailable');
+    });
 }
 
-app.use((error, request, response, next) => {
-  response.status(500).send(error.message);
-});
 
-app.listen (PORT, () => console.log(`listening on ${PORT}`));
+function weatherHandler(request, response, next) {
+  // const { lat, lon } = request.query;
+  weather(request, response, next)
+    .then(summaries => response.send(summaries))
+    .catch((error) => {
+      console.error(error);
+      response.status(500).send('Sorry. Something isn\'t right!');
+    });
+}
+
+
+
+app.listen(process.env.PORT, () => console.log(`Server up on ${process.env.PORT}`));
